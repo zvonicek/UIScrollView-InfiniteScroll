@@ -27,7 +27,7 @@
  *
  *  Infinite scroll will call implemented methods during user interaction.
  */
-@property (nonatomic) UIView* infiniteScrollIndicatorView;
+@property (nonatomic) UIView *infiniteScrollIndicatorView;
 
 /**
  *  Vertical margin around indicator view (Default: 11)
@@ -37,7 +37,7 @@
 /**
  *  Custom action offset. Provide your own block if you wish to start preloading data earlier.
  */
-@property (nonatomic, copy) CGFloat(^infiniteScrollActionOffsetHandler)(id scrollView, CGFloat proposedContentOffsetY, UIEdgeInsets originalContentInset);
+@property (nonatomic, copy) CGFloat(^infiniteScrollActionOffsetHandler)(id scrollView, CGFloat proposedContentOffsetY, UIEdgeInsets originalContentInsets);
 
 /**
  *  Setup infinite scroll handler

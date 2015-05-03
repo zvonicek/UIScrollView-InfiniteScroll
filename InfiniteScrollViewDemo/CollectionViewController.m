@@ -8,7 +8,7 @@
 
 #import "CollectionViewController.h"
 #import "PhotoCell.h"
-
+#import "PhotoViewController.h"
 #import "UIApplication+NetworkIndicator.h"
 #import "UIScrollView+InfiniteScroll.h"
 #import "CustomInfiniteIndicator.h"
@@ -37,13 +37,13 @@ static NSString* const kFlickrAPIEndpoint = @"https://api.flickr.com/services/fe
     self.cache = [NSCache new];
     
     // Create custom indicator
-    CustomInfiniteIndicator *indicator = [[CustomInfiniteIndicator alloc] initWithFrame:CGRectMake(0, 0, 40, 40)];
+    CustomInfiniteIndicator *indicator = [[CustomInfiniteIndicator alloc] initWithFrame:CGRectMake(0, 0, 24, 24)];
     
     // Set custom indicator
     self.collectionView.infiniteScrollIndicatorView = indicator;
     
-    // Increase indicator margins
-    self.collectionView.infiniteScrollIndicatorMargin = 20;
+    // Set custom indicator margin
+    self.collectionView.infiniteScrollIndicatorMargin = 40;
     
     // Add infinite scroll handler
     [self.collectionView addInfiniteScrollWithHandler:^(UICollectionView *collectionView) {
@@ -55,6 +55,38 @@ static NSString* const kFlickrAPIEndpoint = @"https://api.flickr.com/services/fe
     
     // Load initial data
     [self loadFlickrFeedWithDelay:NO completion:nil];
+}
+
+- (BOOL)shouldPerformSegueWithIdentifier:(NSString *)identifier sender:(id)sender {
+    if([identifier isEqualToString:@"ShowPhoto"]) {
+        NSIndexPath *indexPath = [self.collectionView indexPathForCell:sender];
+        NSURL* photoURL = [NSURL URLWithString:self.flickrPhotos[indexPath.item]];
+        UIImage* image = [self.cache objectForKey:photoURL];
+        
+        if(!image) {
+            return NO;
+        }
+    }
+    
+    return YES;
+}
+
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    if([segue.identifier isEqualToString:@"ShowPhoto"]) {
+        NSIndexPath *indexPath = [self.collectionView indexPathForCell:sender];
+        NSURL* photoURL = [NSURL URLWithString:self.flickrPhotos[indexPath.item]];
+        UIImage* image = [self.cache objectForKey:photoURL];
+        PhotoViewController *photoController;
+        
+        if([segue.destinationViewController isKindOfClass:UINavigationController.class]) {
+            photoController = (PhotoViewController *)((UINavigationController *)segue.destinationViewController).topViewController;
+        }
+        else {
+            photoController = segue.destinationViewController;
+        }
+        
+        photoController.photo = image;
+    }
 }
 
 - (void)willRotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration {
@@ -220,13 +252,21 @@ static NSString* const kFlickrAPIEndpoint = @"https://api.flickr.com/services/fe
 
 - (CGSize)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout *)collectionViewLayout sizeForItemAtIndexPath:(NSIndexPath *)indexPath {
     CGFloat collectionWidth = CGRectGetWidth(collectionView.bounds);
-    CGFloat itemWidth = collectionWidth * 0.5;
+    CGFloat itemWidth = collectionWidth / 3 - 1;
     
     if(UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
-        itemWidth = collectionWidth * 0.25;
+        itemWidth = collectionWidth / 4 - 1;
     }
     
     return CGSizeMake(itemWidth, itemWidth);
+}
+
+- (CGFloat)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout *)collectionViewLayout minimumInteritemSpacingForSectionAtIndex:(NSInteger)section {
+    return 1;
+}
+
+- (CGFloat)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout *)collectionViewLayout minimumLineSpacingForSectionAtIndex:(NSInteger)section {
+    return 1;
 }
 
 @end
