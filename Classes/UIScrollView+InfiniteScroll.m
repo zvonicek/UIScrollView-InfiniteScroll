@@ -112,6 +112,23 @@ CGFloat pb_infiniteScrollIndicatorViewInset;
     self.pb_infiniteScrollInitialized = NO;
 }
 
+- (void)beginInfiniteScroll:(BOOL)scrollToIndicator {
+    if(self.pb_infiniteScrollState != PBInfiniteScrollStateNone) {
+        return;
+    }
+    
+    TRACE(@"beginInfiniteScroll.");
+    
+    [self pb_startAnimatingInfiniteScroll:^(BOOL finished) {
+        if(finished) {
+            [self pb_scrollToInfiniteIndicator:scrollToIndicator];
+        }
+    }];
+    
+    // This will delay handler execution until scroll deceleration
+    [self performSelector:@selector(pb_callInfiniteScrollHandler) withObject:self afterDelay:0.1 inModes:@[ NSDefaultRunLoopMode ]];
+}
+
 - (void)finishInfiniteScroll {
     [self finishInfiniteScrollWithCompletion:nil];
 }
@@ -225,7 +242,7 @@ CGFloat pb_infiniteScrollIndicatorViewInset;
  */
 - (void)pb_handlePanGesture:(UITapGestureRecognizer*)gestureRecognizer {
     if(gestureRecognizer.state == UIGestureRecognizerStateEnded) {
-        [self pb_scrollToInfiniteIndicatorIfNeeded];
+        [self pb_scrollToInfiniteIndicator:NO];
     }
 }
 
@@ -341,7 +358,7 @@ CGFloat pb_infiniteScrollIndicatorViewInset;
 /**
  *  Start animating infinite indicator
  */
-- (void)pb_startAnimatingInfiniteScroll {
+- (void)pb_startAnimatingInfiniteScroll:(void(^)(BOOL finished))completion {
     UIView* activityIndicator = [self pb_getOrCreateActivityIndicatorView];
     
     // Layout indicator view
@@ -379,11 +396,7 @@ CGFloat pb_infiniteScrollIndicatorViewInset;
     self.pb_infiniteScrollState = PBInfiniteScrollStateLoading;
     
     // Animate content insets
-    [self pb_setScrollViewContentInset:contentInset animated:YES completion:^(BOOL finished) {
-        if(finished) {
-            [self pb_scrollToInfiniteIndicatorIfNeeded];
-        }
-    }];
+    [self pb_setScrollViewContentInset:contentInset animated:YES completion:completion];
 
     TRACE(@"Start animating.");
 }
@@ -468,7 +481,13 @@ CGFloat pb_infiniteScrollIndicatorViewInset;
     if(contentOffset.y > actionOffset) {
         TRACE(@"Action.");
         
-        [self pb_startAnimatingInfiniteScroll];
+        [self pb_startAnimatingInfiniteScroll:^(BOOL finished) {
+            // finished animations uninterrupted?
+            if(finished) {
+                // scroll to infinite indicator if needed
+                [self pb_scrollToInfiniteIndicator:NO];
+            }
+        }];
         
         // This will delay handler execution until scroll deceleration
         [self performSelector:@selector(pb_callInfiniteScrollHandler) withObject:self afterDelay:0.1 inModes:@[ NSDefaultRunLoopMode ]];
@@ -477,8 +496,10 @@ CGFloat pb_infiniteScrollIndicatorViewInset;
 
 /**
  *  Scrolls down to activity indicator position if activity indicator is partially visible
+ *
+ *  @param alwaysScroll pass NO to scroll to indicator only if it's partially visible
  */
-- (void)pb_scrollToInfiniteIndicatorIfNeeded {
+- (void)pb_scrollToInfiniteIndicator:(BOOL)alwaysScroll {
     // do not interfere with user
     if([self isDragging]) {
         return;
@@ -494,11 +515,13 @@ CGFloat pb_infiniteScrollIndicatorViewInset;
     
     CGFloat minY = contentHeight - self.bounds.size.height + [self pb_originalBottomInset];
     CGFloat maxY = minY + indicatorRowHeight;
-    
+
     TRACE(@"minY = %.2f; maxY = %.2f; offsetY = %.2f", minY, maxY, self.contentOffset.y);
+    BOOL isPartiallyVisible = (self.contentOffset.y > minY && self.contentOffset.y < maxY);
     
-    if(self.contentOffset.y > minY && self.contentOffset.y < maxY) {
+    if(isPartiallyVisible || alwaysScroll) {
         TRACE(@"Scroll to infinite indicator.");
+        
         [self setContentOffset:CGPointMake(0, maxY) animated:YES];
     }
 }

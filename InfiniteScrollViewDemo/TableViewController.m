@@ -14,7 +14,7 @@
 #import "CustomInfiniteIndicator.h"
 #import "UIScrollView+InfiniteScroll.h"
 
-#define USE_AUTOSIZING_CELLS 1
+#define USE_AUTOSIZING_CELLS 0
 
 static NSString* const kAPIEndpointURL = @"https://hn.algolia.com/api/v1/search_by_date?tags=story&hitsPerPage=%ld&page=%ld";
 static NSString* const kShowBrowserSegueIdentifier = @"ShowBrowser";
@@ -63,14 +63,26 @@ static NSString* const kJSONNumPagesKey = @"nbPages";
     
     // Add infinite scroll handler
     [self.tableView addInfiniteScrollWithHandler:^(UITableView* tableView) {
-        [weakSelf loadRemoteDataWithDelay:YES completion:^{
+        [weakSelf loadRemoteData:^{
             // Finish infinite scroll animations
             [tableView finishInfiniteScroll];
         }];
     }];
     
-    // Load initial data
-    [self loadRemoteDataWithDelay:NO completion:nil];
+    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemRefresh target:self action:@selector(manuallyBeginInfiniteScroll)];
+}
+
+- (void)manuallyBeginInfiniteScroll {
+    [self.tableView beginInfiniteScroll:YES];
+}
+
+- (void)viewDidAppear:(BOOL)animated {
+    [super viewDidAppear:animated];
+    
+    // trigger first time load via infinite scroll
+    if(!self.stories.count) {
+        [self.tableView beginInfiniteScroll:YES];
+    }
 }
 
 - (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
@@ -110,7 +122,7 @@ static NSString* const kJSONNumPagesKey = @"nbPages";
 
 - (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
     if(buttonIndex == alertView.firstOtherButtonIndex) {
-        [self loadRemoteDataWithDelay:NO completion:nil];
+        [self loadRemoteData:nil];
     }
 }
 
@@ -170,7 +182,7 @@ static NSString* const kJSONNumPagesKey = @"nbPages";
     });
 }
 
-- (void)loadRemoteDataWithDelay:(BOOL)withDelay completion:(void(^)(void))completion
+- (void)loadRemoteData:(void(^)(void))completion
 {
     // Show network activity indicator
     [[UIApplication sharedApplication] startNetworkActivity];
@@ -198,9 +210,7 @@ static NSString* const kJSONNumPagesKey = @"nbPages";
     // Start network task
     
     // I run -[task resume] with delay because my network is too fast
-    NSTimeInterval delay = (withDelay ? 5.0 : 0.0);
-    
-    [task performSelector:@selector(resume) withObject:nil afterDelay:delay];
+    [task performSelector:@selector(resume) withObject:nil afterDelay:5.0];
 }
 
 @end

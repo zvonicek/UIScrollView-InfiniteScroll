@@ -47,6 +47,15 @@
 - (void)removeInfiniteScroll;
 
 /**
+ *  Manually begin infinite scroll.
+ *  This method follows the same flow as if user scrolled to the bottom.
+ *  Repetitive calls are no-op until all animations finished.
+ *
+ *  @param scrollToIndicator pass YES to scroll to indicator view
+ */
+- (void)beginInfiniteScroll:(BOOL)scrollToIndicator;
+
+/**
  *  Finish infinite scroll animations
  *
  *  You must call this method from your infinite scroll handler to finish all
