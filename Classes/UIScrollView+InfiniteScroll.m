@@ -24,6 +24,9 @@ static const NSTimeInterval kPBInfiniteScrollAnimationDuration = 0.35;
 // Keys for values in associated dictionary
 static const void *kPBInfiniteScrollStateKey = &kPBInfiniteScrollStateKey;
 
+static void * kPBInfiniteScrollStateContentOffsetContext = &kPBInfiniteScrollStateContentOffsetContext;
+static void * kPBInfiniteScrollStateContentSizeContext = &kPBInfiniteScrollStateContentSizeContext;
+
 /**
  *  Infinite scroll state class.
  *  @private
@@ -94,9 +97,6 @@ static const void *kPBInfiniteScrollStateKey = &kPBInfiniteScrollStateKey;
 
 @implementation _PBInfiniteScrollState
 
-static void * kPBInfiniteScrollStateContentOffsetContext = &kPBInfiniteScrollStateContentOffsetContext;
-static void * kPBInfiniteScrollStateContentSizeContext = &kPBInfiniteScrollStateContentSizeContext;
-
 - (instancetype)init {
     [NSException raise:NSInternalInconsistencyException format:@"Use -initForScrollView: instead."];
     return [self initForScrollView:nil];
@@ -120,8 +120,8 @@ static void * kPBInfiniteScrollStateContentSizeContext = &kPBInfiniteScrollState
 }
 
 - (void)dealloc {
-    [self.targetScrollView removeObserver:self forKeyPath:@"scrollView.contentOffset" context:kPBInfiniteScrollStateContentOffsetContext];
-    [self.targetScrollView removeObserver:self forKeyPath:@"scrollView.contentSize" context:kPBInfiniteScrollStateContentSizeContext];
+    [self.targetScrollView removeObserver:self forKeyPath:@"contentOffset" context:kPBInfiniteScrollStateContentOffsetContext];
+    [self.targetScrollView removeObserver:self forKeyPath:@"contentSize" context:kPBInfiniteScrollStateContentSizeContext];
 }
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
