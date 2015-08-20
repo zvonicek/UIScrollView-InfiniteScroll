@@ -18,17 +18,6 @@
 #   define TRACE(_format, ...)
 #endif
 
-static void PBSwizzleMethod(Class c, SEL original, SEL alternate) {
-    Method origMethod = class_getInstanceMethod(c, original);
-    Method newMethod = class_getInstanceMethod(c, alternate);
-    
-    if(class_addMethod(c, original, method_getImplementation(newMethod), method_getTypeEncoding(newMethod))) {
-        class_replaceMethod(c, alternate, method_getImplementation(origMethod), method_getTypeEncoding(origMethod));
-    } else {
-        method_exchangeImplementations(origMethod, newMethod);
-    }
-}
-
 // Animation duration used for setContentOffset:
 static const NSTimeInterval kPBInfiniteScrollAnimationDuration = 0.35;
 
@@ -40,6 +29,11 @@ static const void *kPBInfiniteScrollStateKey = &kPBInfiniteScrollStateKey;
  *  @private
  */
 @interface _PBInfiniteScrollState : NSObject
+
+/**
+ *  A weak reference to target scrollview used exclusively for KVO
+ */
+@property (weak) UIScrollView *targetScrollView;
 
 /**
  *  A flag that indicates whether scroll is initialized
@@ -83,18 +77,73 @@ static const void *kPBInfiniteScrollStateKey = &kPBInfiniteScrollStateKey;
  */
 @property (copy) void(^infiniteScrollHandler)(id scrollView);
 
+@property (copy) void(^didChangeContentSizeHandler)(CGSize oldContentSize, CGSize newContentSize);
+@property (copy) void(^didChangeContentOffsetHandler)(CGPoint oldContentOffset, CGPoint newContentOffset);
+
+
+/**
+ *  Designated initializer.
+ *
+ *  @param scrollView
+ *
+ *  @return instancetype
+ */
+- (instancetype)initForScrollView:(UIScrollView *)scrollView NS_DESIGNATED_INITIALIZER;
+
 @end
 
 @implementation _PBInfiniteScrollState
 
+static void * kPBInfiniteScrollStateContentOffsetContext = &kPBInfiniteScrollStateContentOffsetContext;
+static void * kPBInfiniteScrollStateContentSizeContext = &kPBInfiniteScrollStateContentSizeContext;
+
 - (instancetype)init {
+    [NSException raise:NSInternalInconsistencyException format:@"Use -initForScrollView: instead."];
+    return [self initForScrollView:nil];
+}
+
+- (instancetype)initForScrollView:(UIScrollView *)scrollView {
+    NSParameterAssert(scrollView);
+    
     if(self = [super init]) {
+        _targetScrollView = scrollView;
         _indicatorStyle = UIActivityIndicatorViewStyleGray;
         
         // Default row height (44) minus activity indicator height (22) / 2
         _indicatorMargin = 11;
+        
+        // register for KVO
+        [scrollView addObserver:self forKeyPath:@"contentOffset" options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionOld context:kPBInfiniteScrollStateContentOffsetContext];
+        [scrollView addObserver:self forKeyPath:@"contentSize" options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionOld context:kPBInfiniteScrollStateContentSizeContext];
     }
     return self;
+}
+
+- (void)dealloc {
+    [self.targetScrollView removeObserver:self forKeyPath:@"scrollView.contentOffset" context:kPBInfiniteScrollStateContentOffsetContext];
+    [self.targetScrollView removeObserver:self forKeyPath:@"scrollView.contentSize" context:kPBInfiniteScrollStateContentSizeContext];
+}
+
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
+    if(context == kPBInfiniteScrollStateContentOffsetContext) {
+        if(self.didChangeContentOffsetHandler) {
+            CGPoint oldValue = [change[NSKeyValueChangeOldKey] CGPointValue];
+            CGPoint newValue = [change[NSKeyValueChangeNewKey] CGPointValue];
+            
+            self.didChangeContentOffsetHandler(oldValue, newValue);
+        }
+    }
+    else if(context == kPBInfiniteScrollStateContentSizeContext) {
+        if(self.didChangeContentSizeHandler) {
+            CGSize oldValue = [change[NSKeyValueChangeOldKey] CGSizeValue];
+            CGSize newValue = [change[NSKeyValueChangeNewKey] CGSizeValue];
+            
+            self.didChangeContentSizeHandler(oldValue, newValue);
+        }
+    }
+    else {
+        [super observeValueForKeyPath:keyPath ofObject:object change:change context:context];
+    }
 }
 
 @end
@@ -207,7 +256,17 @@ static const void *kPBInfiniteScrollStateKey = &kPBInfiniteScrollStateKey;
     _PBInfiniteScrollState *state = objc_getAssociatedObject(self, kPBInfiniteScrollStateKey);
 
     if(!state) {
-        state = [_PBInfiniteScrollState new];
+        state = [[_PBInfiniteScrollState alloc] initForScrollView:self];
+        
+        __weak __typeof(self) weakSelf = self;
+        
+        state.didChangeContentOffsetHandler = ^(CGPoint oldContentOffset, CGPoint newContentOffset) {
+            [weakSelf pb_didChangeContentOffsetFrom:oldContentOffset to:newContentOffset];
+        };
+        
+        state.didChangeContentSizeHandler = ^(CGSize oldContentSize, CGSize newContentSize) {
+            [weakSelf pb_didChangeContentSizeFrom:oldContentSize to:newContentSize];
+        };
         
         objc_setAssociatedObject(self, kPBInfiniteScrollStateKey, state, OBJC_ASSOCIATION_RETAIN);
     }
@@ -216,14 +275,6 @@ static const void *kPBInfiniteScrollStateKey = &kPBInfiniteScrollStateKey;
 }
 
 #pragma mark - Private methods
-
-+ (void)load {
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        PBSwizzleMethod(self, @selector(setContentOffset:), @selector(pb_setContentOffset:));
-        PBSwizzleMethod(self, @selector(setContentSize:), @selector(pb_setContentSize:));
-    });
-}
 
 /**
  *  Additional pan gesture handler used to adjust content offset to reveal or hide indicator view.
@@ -241,11 +292,9 @@ static const void *kPBInfiniteScrollStateKey = &kPBInfiniteScrollStateKey;
  *
  *  @param contentOffset
  */
-- (void)pb_setContentOffset:(CGPoint)contentOffset {
-    [self pb_setContentOffset:contentOffset];
-    
+- (void)pb_didChangeContentOffsetFrom:(CGPoint)oldContentOffset to:(CGPoint)newContentOffset {
     if(self.pb_infiniteScrollState.initialized) {
-        [self pb_scrollViewDidScroll:contentOffset];
+        [self pb_scrollViewDidScroll:newContentOffset];
     }
 }
 
@@ -254,11 +303,9 @@ static const void *kPBInfiniteScrollStateKey = &kPBInfiniteScrollStateKey;
  *
  *  @param contentSize <#contentSize description#>
  */
-- (void)pb_setContentSize:(CGSize)contentSize {
-    [self pb_setContentSize:contentSize];
-    
+- (void)pb_didChangeContentSizeFrom:(CGSize)oldContentSize to:(CGSize)newContentSize {
     if(self.pb_infiniteScrollState.initialized) {
-        [self pb_positionInfiniteScrollIndicatorWithContentSize:contentSize];
+        [self pb_positionInfiniteScrollIndicatorWithContentSize:newContentSize];
     }
 }
 
