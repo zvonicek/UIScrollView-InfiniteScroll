@@ -8,7 +8,7 @@
 
 import UIKit
 
-private let useAutosizingCells = true
+private let useAutosizingCells = false
 
 class TableViewController: UITableViewController, UIAlertViewDelegate {
     
@@ -104,11 +104,10 @@ class TableViewController: UITableViewController, UIAlertViewDelegate {
             (data: NSData!, response: NSURLResponse!, error: NSError!) -> Void in
             
             dispatch_async(dispatch_get_main_queue(), { () -> Void in
-                self.handleResponse(data, response: response, error: error)
-                
-                UIApplication.sharedApplication().stopNetworkActivity()
-                
-                handler?()
+                self.handleResponse(data, response: response, error: error) {
+                    UIApplication.sharedApplication().stopNetworkActivity()
+                    handler?()
+                }
             });
         })
         
@@ -122,7 +121,7 @@ class TableViewController: UITableViewController, UIAlertViewDelegate {
         })
     }
     
-    private func handleResponse(data: NSData!, response: NSURLResponse!, error: NSError!) {
+    private func handleResponse(data: NSData!, response: NSURLResponse!, error: NSError!, completion: (() -> Void)!) {
         if error != nil {
             showAlertWithError(error)
             return;
@@ -133,6 +132,7 @@ class TableViewController: UITableViewController, UIAlertViewDelegate {
         
         if jsonError != nil {
             showAlertWithError(jsonError)
+            completion()
             return
         }
         
@@ -142,12 +142,21 @@ class TableViewController: UITableViewController, UIAlertViewDelegate {
         
         if let results = responseDict?[JSONResultsKey] as? [Dictionary<String, AnyObject>] {
             currentPage++
-
-            for i in results {
-                stories.append(StoryModel(i))
+            
+            var indexPaths = [ NSIndexPath ]()
+            let first = stories.count
+            
+            for (index, dict) in enumerate(results) {
+                stories.append(StoryModel(dict))
+                indexPaths.append(NSIndexPath(forItem: first + index, inSection: 0))
             }
             
-            tableView.reloadData()
+            tableView.beginUpdates()
+            tableView.insertRowsAtIndexPaths(indexPaths, withRowAnimation: .Automatic)
+            tableView.endUpdatesWithCompletion(completion)
+        }
+        else {
+            completion()
         }
     }
     

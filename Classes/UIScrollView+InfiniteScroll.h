@@ -8,6 +8,7 @@
 //
 
 #import <UIKit/UIKit.h>
+#import "UITableView+InfiniteScroll.h"
 
 #ifdef __pb_kindof
 #   undef __pb_kindof

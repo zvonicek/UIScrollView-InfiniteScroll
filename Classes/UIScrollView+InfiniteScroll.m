@@ -230,7 +230,7 @@ static const void *kPBInfiniteScrollStateKey = &kPBInfiniteScrollStateKey;
  *
  *  @param gestureRecognizer
  */
-- (void)pb_handlePanGesture:(UITapGestureRecognizer *)gestureRecognizer {
+- (void)pb_handlePanGesture:(UIPanGestureRecognizer *)gestureRecognizer {
     if(gestureRecognizer.state == UIGestureRecognizerStateEnded) {
         [self pb_scrollToInfiniteIndicatorIfNeeded];
     }
@@ -425,14 +425,6 @@ static const void *kPBInfiniteScrollStateKey = &kPBInfiniteScrollStateKey;
 }
 
 /**
- *  Cancel pan gesture recognizer with the only known way to do this...
- */
-- (void)pb_cancelPanGestureRecognizer {
-    self.panGestureRecognizer.enabled = NO;
-    self.panGestureRecognizer.enabled = YES;
-}
-
-/**
  *  Stop animating infinite scroll indicator
  *
  *  @param handler a completion handler
@@ -442,8 +434,6 @@ static const void *kPBInfiniteScrollStateKey = &kPBInfiniteScrollStateKey;
     UIView *activityIndicator = self.infiniteScrollIndicatorView;
     UIEdgeInsets contentInset = self.contentInset;
     CGPoint contentOffset = self.contentOffset;
-    
-    CGFloat cancelPanGestureContentOffset = self.contentSize.height - self.bounds.size.height + [self pb_originalBottomInset] + [self pb_infiniteIndicatorRowHeight];
     
     // Remove row height inset
     contentInset.bottom -= state.indicatorInset;
@@ -456,11 +446,6 @@ static const void *kPBInfiniteScrollStateKey = &kPBInfiniteScrollStateKey;
     
     // Reset extra bottom inset
     state.extraBottomInset = 0;
-    
-    // Cancel pan gesture recongizer if user drags too much down
-    if(contentOffset.y > cancelPanGestureContentOffset) {
-        [self pb_cancelPanGestureRecognizer];
-    }
     
     // Animate content insets
     [self pb_animateScrollViewContent:^{
