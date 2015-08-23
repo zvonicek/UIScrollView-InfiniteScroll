@@ -433,7 +433,6 @@ static const void *kPBInfiniteScrollStateKey = &kPBInfiniteScrollStateKey;
     _PBInfiniteScrollState *state = self.pb_infiniteScrollState;
     UIView *activityIndicator = self.infiniteScrollIndicatorView;
     UIEdgeInsets contentInset = self.contentInset;
-    CGPoint contentOffset = self.contentOffset;
     
     // Remove row height inset
     contentInset.bottom -= state.indicatorInset;
@@ -450,9 +449,6 @@ static const void *kPBInfiniteScrollStateKey = &kPBInfiniteScrollStateKey;
     // Animate content insets
     [self pb_animateScrollViewContent:^{
         self.contentInset = contentInset;
-        
-        // compensate decreasing contentInset
-        self.contentOffset = contentOffset;
     } completion:^(BOOL finished) {
         // Curtain is closing they're throwing roses at my feet
         if([activityIndicator respondsToSelector:@selector(stopAnimating)]) {
