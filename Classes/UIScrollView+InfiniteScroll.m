@@ -392,7 +392,9 @@ static const void *kPBInfiniteScrollStateKey = &kPBInfiniteScrollStateKey;
     state.loading = YES;
     
     // Animate content insets
-    [self pb_setScrollViewContentInset:contentInset animated:YES completion:^(BOOL finished) {
+    [self pb_animateScrollViewContent:^{
+        self.contentInset = contentInset;
+    } completion:^(BOOL finished) {
         if(finished) {
             [self pb_scrollToInfiniteIndicatorIfNeeded];
         }
@@ -406,10 +408,11 @@ static const void *kPBInfiniteScrollStateKey = &kPBInfiniteScrollStateKey;
  *
  *  @param handler a completion handler
  */
-- (void)pb_stopAnimatingInfiniteScrollWithCompletion:(nullable void(^)(id scrollView))handler {
+- (void)pb_stopAnimatingInfiniteScrollWithCompletion:(nullable void(^)(__pb_kindof(UIScrollView *) scrollView))handler {
     _PBInfiniteScrollState *state = self.pb_infiniteScrollState;
     UIView *activityIndicator = self.infiniteScrollIndicatorView;
     UIEdgeInsets contentInset = self.contentInset;
+    CGPoint contentOffset = self.contentOffset;
     
     // Remove row height inset
     contentInset.bottom -= state.indicatorInset;
@@ -424,7 +427,12 @@ static const void *kPBInfiniteScrollStateKey = &kPBInfiniteScrollStateKey;
     state.extraBottomInset = 0;
     
     // Animate content insets
-    [self pb_setScrollViewContentInset:contentInset animated:YES completion:^(BOOL finished) {
+    [self pb_animateScrollViewContent:^{
+        self.contentInset = contentInset;
+        
+        // compensate decreasing contentInset
+        self.contentOffset = contentOffset;
+    } completion:^(BOOL finished) {
         // Curtain is closing they're throwing roses at my feet
         if([activityIndicator respondsToSelector:@selector(stopAnimating)]) {
             [activityIndicator performSelector:@selector(stopAnimating) withObject:nil];
@@ -454,6 +462,11 @@ static const void *kPBInfiniteScrollStateKey = &kPBInfiniteScrollStateKey;
     TRACE(@"Stop animating.");
 }
 
+/**
+ *  Called whenever scroll offset changes.
+ *
+ *  @param contentOffset
+ */
 - (void)pb_scrollViewDidScroll:(CGPoint)contentOffset {
     _PBInfiniteScrollState *state = self.pb_infiniteScrollState;
     
@@ -522,33 +535,17 @@ static const void *kPBInfiniteScrollStateKey = &kPBInfiniteScrollStateKey;
 }
 
 /**
- *  Set content inset with animation.
+ *  A convenience wrapper around -animateWithDuration: to animate scroll view content changes.
  *
- *  @param contentInset a new content inset
- *  @param animated     animate?
- *  @param completion   a completion block
+ *  @param animations
+ *  @param completion
  */
-- (void)pb_setScrollViewContentInset:(UIEdgeInsets)contentInset animated:(BOOL)animated completion:(void(^)(BOOL finished))completion {
-    void(^animations)(void) = ^{
-        self.contentInset = contentInset;
-    };
-    
-    if(animated)
-    {
-        [UIView animateWithDuration:kPBInfiniteScrollAnimationDuration
-                              delay:0.0
-                            options:(UIViewAnimationOptionAllowUserInteraction | UIViewAnimationOptionBeginFromCurrentState)
-                         animations:animations
-                         completion:completion];
-    }
-    else
-    {
-        [UIView performWithoutAnimation:animations];
-        
-        if(completion) {
-            completion(YES);
-        }
-    }
+- (void)pb_animateScrollViewContent:(void(^)(void))animations completion:(void(^)(BOOL finished))completion {
+    [UIView animateWithDuration:kPBInfiniteScrollAnimationDuration
+                          delay:0.0
+                        options:(UIViewAnimationOptionAllowUserInteraction | UIViewAnimationOptionBeginFromCurrentState)
+                     animations:animations
+                     completion:completion];
 }
 
 @end
