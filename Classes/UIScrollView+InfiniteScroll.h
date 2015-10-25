@@ -9,10 +9,27 @@
 
 #import <UIKit/UIKit.h>
 
+#ifdef __pb_kindof
+#   undef __pb_kindof
+#endif
+
+#if __has_feature(objc_kindof)
+#   define __pb_kindof(__typename) __kindof __typename
+#else
+#   define __pb_kindof(__typename) id
+#endif
+
+NS_ASSUME_NONNULL_BEGIN
+
 @interface UIScrollView (InfiniteScroll)
 
 /**
- *  Infinite scroll activity indicator style (default: UIActivityIndicatorViewStyleGray)
+ *  Flag that indicates whether infinite scroll is animating
+ */
+@property (nonatomic, readonly, getter=isAnimatingInfiniteScroll) BOOL animatingInfiniteScroll;
+
+/**
+ *  Infinite scroll activity indicator style (default: UIActivityIndicatorViewStyleGray on iOS, UIActivityIndicatorViewStyleWhite on tvOS)
  */
 @property (nonatomic) UIActivityIndicatorViewStyle infiniteScrollIndicatorStyle;
 
@@ -27,7 +44,7 @@
  *
  *  Infinite scroll will call implemented methods during user interaction.
  */
-@property (nonatomic) UIView *infiniteScrollIndicatorView;
+@property (nonatomic, nullable) UIView *infiniteScrollIndicatorView;
 
 /**
  *  Vertical margin around indicator view (Default: 11)
@@ -39,7 +56,7 @@
  *
  *  @param handler a handler block
  */
-- (void)addInfiniteScrollWithHandler:(void(^)(id scrollView))handler;
+- (void)addInfiniteScrollWithHandler:(void(^)(__pb_kindof(UIScrollView *) scrollView))handler;
 
 /**
  *  Unregister infinite scroll
@@ -63,7 +80,7 @@
  *
  *  @param handler a completion block handler called when animation finished
  */
-- (void)finishInfiniteScrollWithCompletion:(void(^)(id scrollView))handler;
+- (void)finishInfiniteScrollWithCompletion:(nullable void(^)(__pb_kindof(UIScrollView *) scrollView))handler;
 
 /**
  *  Finish infinite scroll animations
@@ -74,3 +91,5 @@
 - (void)finishInfiniteScroll;
 
 @end
+
+NS_ASSUME_NONNULL_END

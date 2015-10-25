@@ -8,9 +8,16 @@
 
 #import "UIApplication+NetworkIndicator.h"
 
-static NSInteger networkActivityCount = 0;
-
 @implementation UIApplication (NetworkIndicator)
+
+#if TARGET_OS_TV
+
+- (void)startNetworkActivity {}
+- (void)stopNetworkActivity {}
+
+#else
+
+static NSInteger networkActivityCount = 0;
 
 - (void)startNetworkActivity {
     networkActivityCount++;
@@ -19,11 +26,15 @@ static NSInteger networkActivityCount = 0;
 }
 
 - (void)stopNetworkActivity {
-    if(networkActivityCount > 0) {
-        networkActivityCount--;
-        
+    if(networkActivityCount < 1) {
+        return;
+    }
+    
+    if(--networkActivityCount == 0) {
         [self setNetworkActivityIndicatorVisible:NO];
     }
 }
+
+#endif
 
 @end
