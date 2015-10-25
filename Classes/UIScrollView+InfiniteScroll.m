@@ -52,6 +52,11 @@ static const void *kPBInfiniteScrollStateKey = &kPBInfiniteScrollStateKey;
 @property BOOL loading;
 
 /**
+ *  Scroll view should be returned to {0,0} after loading initial content.
+ */
+@property BOOL shouldReturnToTopWhenFinished;
+
+/**
  *  Indicator view.
  */
 @property UIView *indicatorView;
@@ -409,6 +414,9 @@ static const void *kPBInfiniteScrollStateKey = &kPBInfiniteScrollStateKey;
     // Save extra inset
     state.extraBottomInset = extraBottomInset;
     
+    // Return scroll view to top if loading initial content
+    state.shouldReturnToTopWhenFinished = ([self pb_hasActualContent] == NO);
+    
     // Update infinite scroll state
     state.loading = YES;
     
@@ -451,14 +459,23 @@ static const void *kPBInfiniteScrollStateKey = &kPBInfiniteScrollStateKey;
         // Reset scroll state
         state.loading = NO;
         
-        // Initiate scroll to the bottom if due to user interaction contentOffset.y
-        // stuck somewhere between last cell and activity indicator
         if(finished) {
-            CGFloat newY = self.contentSize.height - self.bounds.size.height + self.contentInset.bottom;
-            
-            if(self.contentOffset.y > newY && newY > 0) {
-                [self setContentOffset:CGPointMake(0, newY) animated:YES];
-                TRACE(@"Stop animating and scroll to bottom.");
+            if(state.shouldReturnToTopWhenFinished) {
+                // We have to return back to top when filling up
+                // scroll view with initial content
+                [self setContentOffset:CGPointMake(0, -self.contentInset.top) animated:YES];
+                
+                TRACE(@"Return to top.");
+            }
+            else {
+                // Initiate scroll to the bottom if due to user interaction contentOffset.y
+                // stuck somewhere between last cell and activity indicator
+                CGFloat newY = self.contentSize.height - self.bounds.size.height + self.contentInset.bottom;
+                
+                if(self.contentOffset.y > newY && newY > 0) {
+                    [self setContentOffset:CGPointMake(0, newY) animated:YES];
+                    TRACE(@"Stop animating and scroll to bottom.");
+                }
             }
         }
         
@@ -471,6 +488,14 @@ static const void *kPBInfiniteScrollStateKey = &kPBInfiniteScrollStateKey;
     TRACE(@"Stop animating.");
 }
 
+- (BOOL)pb_hasActualContent {
+    // Disable infinite scroll when scroll view is empty
+    // Default UITableView reports height = 1 on empty tables
+    BOOL hasActualContent = (self.contentSize.height > 1);
+    
+    return hasActualContent;
+}
+
 - (void)pb_scrollViewDidScroll:(CGPoint)contentOffset {
     _PBInfiniteScrollState *state = self.pb_infiniteScrollState;
     
@@ -479,12 +504,8 @@ static const void *kPBInfiniteScrollStateKey = &kPBInfiniteScrollStateKey;
     // The lower bound when infinite scroll should kick in
     CGFloat actionOffset = contentHeight - self.bounds.size.height + [self pb_originalBottomInset];
     
-    // Disable infinite scroll when scroll view is empty
-    // Default UITableView reports height = 1 on empty tables
-    BOOL hasActualContent = (self.contentSize.height > 1);
-    
     // is there any content?
-    if(!hasActualContent) {
+    if([self pb_hasActualContent] == NO) {
         return;
     }
     

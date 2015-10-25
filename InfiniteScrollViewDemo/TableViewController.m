@@ -18,7 +18,7 @@
 #import "CustomInfiniteIndicator.h"
 #import "UIScrollView+InfiniteScroll.h"
 
-#define USE_AUTOSIZING_CELLS 0
+#define USE_AUTOSIZING_CELLS 1
 
 static NSString *const kAPIEndpointURL = @"https://hn.algolia.com/api/v1/search_by_date?tags=story&hitsPerPage=%ld&page=%ld";
 
