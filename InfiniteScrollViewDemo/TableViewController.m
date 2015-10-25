@@ -18,7 +18,7 @@
 #import "CustomInfiniteIndicator.h"
 #import "UIScrollView+InfiniteScroll.h"
 
-#define USE_AUTOSIZING_CELLS 1
+#define USE_AUTOSIZING_CELLS 0
 
 static NSString *const kAPIEndpointURL = @"https://hn.algolia.com/api/v1/search_by_date?tags=story&hitsPerPage=%ld&page=%ld";
 
@@ -86,7 +86,8 @@ static NSString *const kJSONNumPagesKey = @"nbPages";
     }];
     
     // Load initial data
-    [self fetchData:nil];
+//    [self fetchData:nil];
+//    [self.tableView beginInfiniteScroll:YES];
 }
 
 - (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
@@ -191,6 +192,12 @@ static NSString *const kJSONNumPagesKey = @"nbPages";
     NSTimeInterval delay = (self.stories.count == 0 ? 0 : 5);
     
     [task performSelector:@selector(resume) withObject:nil afterDelay:delay];
+}
+
+#pragma mark - Actions
+
+- (IBAction)beginInfiniteScroll:(id)sender {
+    [self.tableView beginInfiniteScroll:YES];
 }
 
 @end

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="9058" systemVersion="15A284" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" initialViewController="uwD-LM-gNq">
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="9059" systemVersion="15A284" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" initialViewController="uwD-LM-gNq">
     <dependencies>
         <deployment identifier="iOS"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="9048"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="9049"/>
     </dependencies>
     <scenes>
         <!--Tab Bar Controller-->
@@ -78,7 +78,13 @@
                             <outlet property="delegate" destination="xKS-uc-UjR" id="MXn-5a-m3M"/>
                         </connections>
                     </tableView>
-                    <navigationItem key="navigationItem" title="Table Demo" id="2aZ-Qb-f3P"/>
+                    <navigationItem key="navigationItem" title="Table Demo" id="2aZ-Qb-f3P">
+                        <barButtonItem key="rightBarButtonItem" systemItem="refresh" id="ocr-kU-Tr7">
+                            <connections>
+                                <action selector="beginInfiniteScroll:" destination="xKS-uc-UjR" id="CBQ-mX-T5S"/>
+                            </connections>
+                        </barButtonItem>
+                    </navigationItem>
                 </tableViewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="qSb-1P-koz" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
