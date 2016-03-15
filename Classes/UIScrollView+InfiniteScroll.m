@@ -501,13 +501,24 @@ static const void* kPBInfiniteScrollTriggerOffsetKey = &kPBInfiniteScrollTrigger
     }
     
     if(contentOffset.y > actionOffset) {
-        TRACE(@"Action.");
-        
-        [self pb_startAnimatingInfiniteScroll];
-        
-        // This will delay handler execution until scroll deceleration
-        [self performSelector:@selector(pb_callInfiniteScrollHandler) withObject:self afterDelay:0.1 inModes:@[ NSDefaultRunLoopMode ]];
+        [self beginInfiniteScroll];
     }
+}
+
+- (void)beginInfiniteScroll
+{
+    _PBInfiniteScrollState *state = self.pb_infiniteScrollState;
+    
+    if(state.loading) {
+        return;
+    }
+    
+    TRACE(@"Action.");
+    
+    [self pb_startAnimatingInfiniteScroll];
+    
+    // This will delay handler execution until scroll deceleration
+    [self performSelector:@selector(pb_callInfiniteScrollHandler) withObject:self afterDelay:0.1 inModes:@[ NSDefaultRunLoopMode ]];
 }
 
 /**
